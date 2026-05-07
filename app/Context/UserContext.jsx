@@ -12,6 +12,23 @@ const DEFAULT_ADMIN_USER = new UserEntity({
   updatedAt: "2026-04-29T00:00:00.000Z"
 });
 
+function getStorageAdapter() {
+  if (typeof globalThis !== "undefined" && globalThis.localStorage) {
+    return {
+      getItem: async (key) => globalThis.localStorage.getItem(key),
+      setItem: async (key, value) => {
+        globalThis.localStorage.setItem(key, value);
+      }
+    };
+  }
+
+  if (AsyncStorage?.getItem && AsyncStorage?.setItem) {
+    return AsyncStorage;
+  }
+
+  return null;
+}
+
 function sanitizeUser(user) {
   if (!user) {
     return null;
@@ -51,14 +68,23 @@ function ensureAdminUser(users) {
 }
 
 export function UserProvider({ children }) {
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState([DEFAULT_ADMIN_USER]);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     async function hydrateSession() {
+      const storage = getStorageAdapter();
+
+      if (!storage) {
+        setUsers([DEFAULT_ADMIN_USER]);
+        setCurrentUserId(null);
+        setHydrated(true);
+        return;
+      }
+
       try {
-        const raw = await AsyncStorage.getItem(STORAGE_KEY);
+        const raw = await storage.getItem(STORAGE_KEY);
 
         if (!raw) {
           setUsers([DEFAULT_ADMIN_USER]);
@@ -89,13 +115,21 @@ export function UserProvider({ children }) {
       return;
     }
 
-    AsyncStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        users: ensureAdminUser(users),
-        currentUserId
-      })
-    ).catch(() => {});
+    const storage = getStorageAdapter();
+
+    if (!storage) {
+      return;
+    }
+
+    storage
+      .setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          users: ensureAdminUser(users),
+          currentUserId
+        })
+      )
+      .catch(() => {});
   }, [hydrated, users, currentUserId]);
 
   const currentUser = useMemo(() => {

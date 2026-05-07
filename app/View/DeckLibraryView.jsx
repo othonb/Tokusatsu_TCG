@@ -36,7 +36,7 @@ function DeckCard({ deck, onOpen, onDelete, onRename }) {
       <View style={styles.countRow}>
         <Text style={styles.countText}>Main {mainCount}</Text>
         <Text style={styles.countText}>Field {fieldCount}</Text>
-        <Text style={styles.countText}>Comander {commanderCount}</Text>
+        <Text style={styles.countText}>Commander {commanderCount}</Text>
       </View>
 
       <View style={styles.cardActions}>
@@ -72,8 +72,9 @@ export function DeckLibraryView() {
   };
 
   const handleOpenDeck = (deckId) => {
-    openDeck(deckId);
-    router.push(`/deckbuilder-editor/${deckId}`);
+    if (openDeck(deckId)) {
+      router.push(`/deckbuilder-editor/${deckId}`);
+    }
   };
 
   return (

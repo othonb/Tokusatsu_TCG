@@ -7,7 +7,7 @@ import { DeckBuilderView } from "../View/DeckBuilderView";
 
 export default function DeckBuilderEditorScreen() {
   const { deckId } = useLocalSearchParams();
-  const { hydrated, hasActiveDeck, activeDeckId, openDeck } = useDeckBuilder();
+  const { decks, hydrated, hasActiveDeck, activeDeckId, openDeck } = useDeckBuilder();
 
   useEffect(() => {
     if (!hydrated || typeof deckId !== "string") {
@@ -18,10 +18,12 @@ export default function DeckBuilderEditorScreen() {
       return;
     }
 
-    if (!openDeck(deckId)) {
+    const deckExists = decks.some((deck) => deck.id === deckId);
+
+    if (!deckExists || !openDeck(deckId)) {
       router.replace("/deckbuilder");
     }
-  }, [activeDeckId, deckId, hydrated, openDeck]);
+  }, [activeDeckId, deckId, decks, hydrated, openDeck]);
 
   if (!hydrated) {
     return (
@@ -35,9 +37,9 @@ export default function DeckBuilderEditorScreen() {
 
   if (!hasActiveDeck || activeDeckId !== deckId) {
     return (
-      <ScreenShell title="Deckbuilder" subtitle="Deck nao encontrado" showBackButton>
+      <ScreenShell title="Deckbuilder" subtitle="Deck não encontrado" showBackButton>
         <View>
-          <Text style={{ color: "#dbe7f2" }}>Este deck nao foi encontrado. Volte para a lista e escolha outro.</Text>
+          <Text style={{ color: "#dbe7f2" }}>Este deck não foi encontrado. Volte para a lista e escolha outro.</Text>
         </View>
       </ScreenShell>
     );

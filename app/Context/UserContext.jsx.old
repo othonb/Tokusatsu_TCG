@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { UserEntity } from "../Entities/UserEntity";
 
@@ -10,14 +11,6 @@ const DEFAULT_ADMIN_USER = new UserEntity({
   createdAt: "2026-04-29T00:00:00.000Z",
   updatedAt: "2026-04-29T00:00:00.000Z"
 });
-
-function getStorage() {
-  if (typeof globalThis === "undefined" || !globalThis.localStorage) {
-    return null;
-  }
-
-  return globalThis.localStorage;
-}
 
 function sanitizeUser(user) {
   if (!user) {
@@ -58,23 +51,14 @@ function ensureAdminUser(users) {
 }
 
 export function UserProvider({ children }) {
-  const [users, setUsers] = useState([DEFAULT_ADMIN_USER]);
+  const [users, setUsers] = useState([]);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     async function hydrateSession() {
-      const storage = getStorage();
-
-      if (!storage) {
-        setUsers([DEFAULT_ADMIN_USER]);
-        setCurrentUserId(null);
-        setHydrated(true);
-        return;
-      }
-
       try {
-        const raw = storage.getItem(STORAGE_KEY);
+        const raw = await AsyncStorage.getItem(STORAGE_KEY);
 
         if (!raw) {
           setUsers([DEFAULT_ADMIN_USER]);
@@ -88,7 +72,7 @@ export function UserProvider({ children }) {
         );
 
         setUsers(nextUsers);
-        setCurrentUserId(null);
+        setCurrentUserId(parsed?.currentUserId ?? null);
       } catch {
         setUsers([DEFAULT_ADMIN_USER]);
         setCurrentUserId(null);
@@ -105,23 +89,14 @@ export function UserProvider({ children }) {
       return;
     }
 
-    const storage = getStorage();
-
-    if (!storage) {
-      return;
-    }
-
-    try {
-      storage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({
-          users: ensureAdminUser(users)
-        })
-      );
-    } catch {
-      // A conta admin continua disponivel em memoria mesmo se a persistencia falhar.
-    }
-  }, [hydrated, users]);
+    AsyncStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        users: ensureAdminUser(users),
+        currentUserId
+      })
+    ).catch(() => {});
+  }, [hydrated, users, currentUserId]);
 
   const currentUser = useMemo(() => {
     return users.find((user) => user.id === currentUserId) ?? null;
